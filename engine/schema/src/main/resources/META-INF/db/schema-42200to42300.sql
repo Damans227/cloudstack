@@ -15,6 +15,15 @@
 -- specific language governing permissions and limitations
 -- under the License.
 
---;
--- Schema upgrade from 4.22.0.0 to 4.23.0.0
---;
+CREATE TABLE IF NOT EXISTS `cloud`.`coffee` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` varchar(40) UNIQUE,
+  `name` varchar(255) NOT NULL,
+  `state` varchar(40) NOT NULL,
+  `account_id` bigint unsigned NOT NULL,
+  `created` datetime NOT NULL COMMENT 'date of creation',
+  `removed` datetime COMMENT 'date of removal',
+  PRIMARY KEY (`id`),
+  KEY (`uuid`),
+  KEY `i_coffee` (`name`, `account_id`, `created`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
