@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS `cloud`.`coffee` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `uuid` varchar(40) UNIQUE,
   `name` varchar(255) NOT NULL,
+  `offering` varchar(40) NOT NULL,
+  `size` varchar(40) NOT NULL,
   `state` varchar(40) NOT NULL,
   `account_id` bigint unsigned NOT NULL,
   `created` datetime NOT NULL COMMENT 'date of creation',

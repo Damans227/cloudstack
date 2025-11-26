@@ -45,6 +45,14 @@ public class CoffeeVO implements Coffee {
     @Column(name = "name")
     private String name;
 
+    @Column(name = "offering")
+    @Enumerated(value = EnumType.STRING)
+    private Offering offering;
+
+    @Column(name = "size")
+    @Enumerated(value = EnumType.STRING)
+    private Size size;
+
     @Column(name = "state")
     @Enumerated(value = EnumType.STRING)
     private State state = State.Created;
@@ -62,9 +70,11 @@ public class CoffeeVO implements Coffee {
         this.uuid = UUID.randomUUID().toString();
     }
 
-    public CoffeeVO(String name, long accountId) {
+    public CoffeeVO(String name, Offering offering, Size size, long accountId) {
         this();
         this.name = name;
+        this.offering = offering;
+        this.size = size;
         this.accountId = accountId;
         this.state = State.Created;
     }
@@ -86,12 +96,12 @@ public class CoffeeVO implements Coffee {
 
     @Override
     public Offering getOffering() {
-        return null;
+        return offering;
     }
 
     @Override
     public Size getSize() {
-        return null;
+        return size;
     }
 
     @Override
@@ -123,6 +133,14 @@ public class CoffeeVO implements Coffee {
         this.name = name;
     }
 
+    public void setOffering(Offering offering) {
+        this.offering = offering;
+    }
+
+    public void setSize(Size size) {
+        this.size = size;
+    }
+
     public void setState(State state) {
         this.state = state;
     }
@@ -145,10 +163,10 @@ public class CoffeeVO implements Coffee {
                 "id=" + id +
                 ", uuid='" + uuid + '\'' +
                 ", name='" + name + '\'' +
+                ", offering=" + offering +
+                ", size=" + size +
                 ", state=" + state +
                 ", accountId=" + accountId +
-                ", created=" + created +
-                ", removed=" + removed +
                 '}';
     }
 }
