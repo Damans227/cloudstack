@@ -15,6 +15,9 @@
 -- specific language governing permissions and limitations
 -- under the License.
 
+--;
+-- Schema upgrade from 4.22.0.0 to 4.23.0.0
+--;
 CREATE TABLE IF NOT EXISTS `cloud`.`coffee` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `uuid` varchar(40) UNIQUE,
