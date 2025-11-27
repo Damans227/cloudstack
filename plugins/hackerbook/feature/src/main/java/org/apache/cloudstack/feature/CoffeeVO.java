@@ -55,7 +55,7 @@ public class CoffeeVO implements Coffee {
 
     @Column(name = "state")
     @Enumerated(value = EnumType.STRING)
-    private State state = State.Created;
+    private State state = State.CREATED;
 
     @Column(name = "account_id")
     private long accountId;
@@ -76,7 +76,8 @@ public class CoffeeVO implements Coffee {
         this.offering = offering;
         this.size = size;
         this.accountId = accountId;
-        this.state = State.Created;
+        this.state = State.CREATED;
+        this.created = new Date();
     }
 
     @Override
