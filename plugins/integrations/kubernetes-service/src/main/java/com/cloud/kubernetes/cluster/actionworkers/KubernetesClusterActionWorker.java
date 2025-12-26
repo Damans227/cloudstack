@@ -893,6 +893,30 @@ public class KubernetesClusterActionWorker {
         return serviceOfferingDao.findById(offeringId);
     }
 
+    protected Long getAffinityGroupForNodeTypeOnCluster(KubernetesClusterNodeType nodeType,
+                                                        KubernetesCluster cluster,
+                                                        Long domainId, Long accountId) {
+        Long affinityGroupId = null;
+        Long controlAffinityGroupId = cluster.getControlNodeAffinityGroupId();
+        Long workerAffinityGroupId = cluster.getWorkerNodeAffinityGroupId();
+        Long etcdAffinityGroupId = cluster.getEtcdNodeAffinityGroupId();
+
+        if (KubernetesClusterNodeType.CONTROL == nodeType && controlAffinityGroupId != null) {
+            affinityGroupId = controlAffinityGroupId;
+        } else if (KubernetesClusterNodeType.WORKER == nodeType && workerAffinityGroupId != null) {
+            affinityGroupId = workerAffinityGroupId;
+        } else if (KubernetesClusterNodeType.ETCD == nodeType && etcdAffinityGroupId != null) {
+            affinityGroupId = etcdAffinityGroupId;
+        }
+
+        // Fall back to ExplicitDedication affinity group if no user-specified group
+        if (affinityGroupId == null) {
+            affinityGroupId = getExplicitAffinityGroup(domainId, accountId);
+        }
+
+        return affinityGroupId;
+    }
+
     protected boolean isDefaultTemplateUsed() {
         if (Arrays.asList(kubernetesCluster.getControlNodeTemplateId(), kubernetesCluster.getWorkerNodeTemplateId(), kubernetesCluster.getEtcdNodeTemplateId()).contains(kubernetesCluster.getTemplateId())) {
             return true;

@@ -426,7 +426,7 @@ public class KubernetesClusterResourceModifierActionWorker extends KubernetesClu
         if (StringUtils.isNotBlank(kubernetesCluster.getKeyPair())) {
             keypairs.add(kubernetesCluster.getKeyPair());
         }
-        Long affinityGroupId = getExplicitAffinityGroup(domainId, accountId);
+        Long affinityGroupId = getAffinityGroupForNodeTypeOnCluster(WORKER, kubernetesCluster, domainId, accountId);
         if (kubernetesCluster.getSecurityGroupId() != null && networkModel.checkSecurityGroupSupportForNetwork(owner, zone, networkIds, List.of(kubernetesCluster.getSecurityGroupId()))) {
             List<Long> securityGroupIds = new ArrayList<>();
             securityGroupIds.add(kubernetesCluster.getSecurityGroupId());

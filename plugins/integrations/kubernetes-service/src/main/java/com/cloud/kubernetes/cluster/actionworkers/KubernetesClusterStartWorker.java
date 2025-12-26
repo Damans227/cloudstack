@@ -270,7 +270,7 @@ public class KubernetesClusterStartWorker extends KubernetesClusterResourceModif
             keypairs.add(kubernetesCluster.getKeyPair());
         }
 
-        Long affinityGroupId = getExplicitAffinityGroup(domainId, accountId);
+        Long affinityGroupId = getAffinityGroupForNodeTypeOnCluster(CONTROL, kubernetesCluster, domainId, accountId);
         String userDataDetails = kubernetesCluster.getCniConfigDetails();
         if (kubernetesCluster.getSecurityGroupId() != null &&
                 networkModel.checkSecurityGroupSupportForNetwork(owner, zone, networkIds,
@@ -439,7 +439,7 @@ public class KubernetesClusterStartWorker extends KubernetesClusterResourceModif
             keypairs.add(kubernetesCluster.getKeyPair());
         }
 
-        Long affinityGroupId = getExplicitAffinityGroup(domainId, accountId);
+        Long affinityGroupId = getAffinityGroupForNodeTypeOnCluster(CONTROL, kubernetesCluster, domainId, accountId);
         if (kubernetesCluster.getSecurityGroupId() != null &&
                 networkModel.checkSecurityGroupSupportForNetwork(owner, zone, networkIds,
                         List.of(kubernetesCluster.getSecurityGroupId()))) {
@@ -483,7 +483,7 @@ public class KubernetesClusterStartWorker extends KubernetesClusterResourceModif
         if (StringUtils.isNotBlank(kubernetesCluster.getKeyPair())) {
             keypairs.add(kubernetesCluster.getKeyPair());
         }
-        Long affinityGroupId = getExplicitAffinityGroup(domainId, accountId);
+        Long affinityGroupId = getAffinityGroupForNodeTypeOnCluster(ETCD, kubernetesCluster, domainId, accountId);
         String hostName = etcdNodeHostnames.get(etcdNodeIndex);
         Map<String, String> customParameterMap = new HashMap<String, String>();
         if (zone.isSecurityGroupEnabled()) {
