@@ -169,6 +169,9 @@ public interface KubernetesCluster extends ControlledEntity, com.cloud.utils.fsm
     Long getControlNodeTemplateId();
     Long getWorkerNodeTemplateId();
     Long getEtcdNodeTemplateId();
+    Long getControlNodeAffinityGroupId();
+    Long getWorkerNodeAffinityGroupId();
+    Long getEtcdNodeAffinityGroupId();
     Long getEtcdNodeCount();
     Long getCniConfigId();
     String getCniConfigDetails();

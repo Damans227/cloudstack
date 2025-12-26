@@ -128,7 +128,7 @@ public class CreateKubernetesClusterCmd extends BaseAsyncCreateCmd {
     @ACL(accessType = AccessType.UseEntry)
     @Parameter(name = ApiConstants.NODE_TYPE_AFFINITY_GROUP_MAP, type = CommandType.MAP,
             description = "(Optional) Node Type to Affinity Group ID mapping. If provided, VMs of each node type will be added to the specified affinity group",
-            since = "4.22.0")
+            since = "4.23.0")
     private Map<String, Map<String, String>> affinityGroupNodeTypeMap;
 
     @ACL(accessType = AccessType.UseEntry)
