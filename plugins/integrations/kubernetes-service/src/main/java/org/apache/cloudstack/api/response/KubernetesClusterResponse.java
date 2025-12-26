@@ -83,6 +83,30 @@ public class KubernetesClusterResponse extends BaseResponseWithAnnotations imple
     @Param(description = "the name of the service offering of the etcd nodes on the Kubernetes cluster")
     private String etcdOfferingName;
 
+    @SerializedName(ApiConstants.CONTROL_NODE_AFFINITY_GROUP_ID)
+    @Param(description = "the ID of the affinity group of the control nodes on the Kubernetes cluster", since = "4.23.0")
+    private String controlNodeAffinityGroupId;
+
+    @SerializedName(ApiConstants.CONTROL_NODE_AFFINITY_GROUP_NAME)
+    @Param(description = "the name of the affinity group of the control nodes on the Kubernetes cluster", since = "4.23.0")
+    private String controlNodeAffinityGroupName;
+
+    @SerializedName(ApiConstants.WORKER_NODE_AFFINITY_GROUP_ID)
+    @Param(description = "the ID of the affinity group of the worker nodes on the Kubernetes cluster", since = "4.23.0")
+    private String workerNodeAffinityGroupId;
+
+    @SerializedName(ApiConstants.WORKER_NODE_AFFINITY_GROUP_NAME)
+    @Param(description = "the name of the affinity group of the worker nodes on the Kubernetes cluster", since = "4.23.0")
+    private String workerNodeAffinityGroupName;
+
+    @SerializedName(ApiConstants.ETCD_NODE_AFFINITY_GROUP_ID)
+    @Param(description = "the ID of the affinity group of the etcd nodes on the Kubernetes cluster", since = "4.23.0")
+    private String etcdNodeAffinityGroupId;
+
+    @SerializedName(ApiConstants.ETCD_NODE_AFFINITY_GROUP_NAME)
+    @Param(description = "the name of the affinity group of the etcd nodes on the Kubernetes cluster", since = "4.23.0")
+    private String etcdNodeAffinityGroupName;
+
     @SerializedName(ApiConstants.ETCD_NODES)
     @Param(description = "the number of the etcd nodes on the Kubernetes cluster")
     private Long etcdNodes;
@@ -470,6 +494,54 @@ public class KubernetesClusterResponse extends BaseResponseWithAnnotations imple
 
     public void setEtcdOfferingName(String etcdOfferingName) {
         this.etcdOfferingName = etcdOfferingName;
+    }
+
+    public String getControlNodeAffinityGroupId() {
+        return controlNodeAffinityGroupId;
+    }
+
+    public void setControlNodeAffinityGroupId(String controlNodeAffinityGroupId) {
+        this.controlNodeAffinityGroupId = controlNodeAffinityGroupId;
+    }
+
+    public String getControlNodeAffinityGroupName() {
+        return controlNodeAffinityGroupName;
+    }
+
+    public void setControlNodeAffinityGroupName(String controlNodeAffinityGroupName) {
+        this.controlNodeAffinityGroupName = controlNodeAffinityGroupName;
+    }
+
+    public String getWorkerNodeAffinityGroupId() {
+        return workerNodeAffinityGroupId;
+    }
+
+    public void setWorkerNodeAffinityGroupId(String workerNodeAffinityGroupId) {
+        this.workerNodeAffinityGroupId = workerNodeAffinityGroupId;
+    }
+
+    public String getWorkerNodeAffinityGroupName() {
+        return workerNodeAffinityGroupName;
+    }
+
+    public void setWorkerNodeAffinityGroupName(String workerNodeAffinityGroupName) {
+        this.workerNodeAffinityGroupName = workerNodeAffinityGroupName;
+    }
+
+    public String getEtcdNodeAffinityGroupId() {
+        return etcdNodeAffinityGroupId;
+    }
+
+    public void setEtcdNodeAffinityGroupId(String etcdNodeAffinityGroupId) {
+        this.etcdNodeAffinityGroupId = etcdNodeAffinityGroupId;
+    }
+
+    public String getEtcdNodeAffinityGroupName() {
+        return etcdNodeAffinityGroupName;
+    }
+
+    public void setEtcdNodeAffinityGroupName(String etcdNodeAffinityGroupName) {
+        this.etcdNodeAffinityGroupName = etcdNodeAffinityGroupName;
     }
 
     public Long getEtcdNodes() {

@@ -1107,6 +1107,12 @@ public class ApiConstants {
     public static final String AFFINITY_GROUP_NAMES = "affinitygroupnames";
     public static final String ASA_INSIDE_PORT_PROFILE = "insideportprofile";
     public static final String AFFINITY_GROUP_ID = "affinitygroupid";
+    public static final String CONTROL_NODE_AFFINITY_GROUP_ID = "controlnodeaffinitygroupid";
+    public static final String CONTROL_NODE_AFFINITY_GROUP_NAME = "controlnodeaffinitygroupname";
+    public static final String WORKER_NODE_AFFINITY_GROUP_ID = "workernodeaffinitygroupid";
+    public static final String WORKER_NODE_AFFINITY_GROUP_NAME = "workernodeaffinitygroupname";
+    public static final String ETCD_NODE_AFFINITY_GROUP_ID = "etcdnodeaffinitygroupid";
+    public static final String ETCD_NODE_AFFINITY_GROUP_NAME = "etcdnodeaffinitygroupname";
     public static final String DEPLOYMENT_PLANNER = "deploymentplanner";
     public static final String ACL_ID = "aclid";
     public static final String ACL_NAME = "aclname";

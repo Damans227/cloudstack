@@ -794,6 +794,33 @@ public class KubernetesClusterManagerImpl extends ManagerBase implements Kuberne
         }
     }
 
+    protected void setNodeTypeAffinityGroupResponse(KubernetesClusterResponse response,
+                                                    KubernetesClusterNodeType nodeType,
+                                                    Long affinityGroupId) {
+        if (affinityGroupId == null) {
+            return;
+        }
+        AffinityGroupVO affinityGroup = affinityGroupDao.findById(affinityGroupId);
+        if (affinityGroup != null) {
+            setAffinityGroupResponseForNodeType(response, affinityGroup, nodeType);
+        }
+    }
+
+    protected void setAffinityGroupResponseForNodeType(KubernetesClusterResponse response,
+                                                       AffinityGroupVO affinityGroup,
+                                                       KubernetesClusterNodeType nodeType) {
+        if (CONTROL == nodeType) {
+            response.setControlNodeAffinityGroupId(affinityGroup.getUuid());
+            response.setControlNodeAffinityGroupName(affinityGroup.getName());
+        } else if (WORKER == nodeType) {
+            response.setWorkerNodeAffinityGroupId(affinityGroup.getUuid());
+            response.setWorkerNodeAffinityGroupName(affinityGroup.getName());
+        } else if (ETCD == nodeType) {
+            response.setEtcdNodeAffinityGroupId(affinityGroup.getUuid());
+            response.setEtcdNodeAffinityGroupName(affinityGroup.getName());
+        }
+    }
+
     @Override
     public KubernetesClusterResponse createKubernetesClusterResponse(long kubernetesClusterId) {
         KubernetesClusterVO kubernetesCluster = kubernetesClusterDao.findById(kubernetesClusterId);
@@ -828,6 +855,9 @@ public class KubernetesClusterManagerImpl extends ManagerBase implements Kuberne
         setNodeTypeServiceOfferingResponse(response, WORKER, kubernetesCluster.getWorkerNodeServiceOfferingId());
         setNodeTypeServiceOfferingResponse(response, CONTROL, kubernetesCluster.getControlNodeServiceOfferingId());
         setNodeTypeServiceOfferingResponse(response, ETCD, kubernetesCluster.getEtcdNodeServiceOfferingId());
+        setNodeTypeAffinityGroupResponse(response, WORKER, kubernetesCluster.getWorkerNodeAffinityGroupId());
+        setNodeTypeAffinityGroupResponse(response, CONTROL, kubernetesCluster.getControlNodeAffinityGroupId());
+        setNodeTypeAffinityGroupResponse(response, ETCD, kubernetesCluster.getEtcdNodeAffinityGroupId());
 
         if (kubernetesCluster.getEtcdNodeCount() != null) {
             response.setEtcdNodes(kubernetesCluster.getEtcdNodeCount());
