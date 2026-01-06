@@ -23,3 +23,24 @@
 CALL `cloud`.`IDEMPOTENT_ADD_COLUMN`('cloud.kubernetes_cluster', 'control_node_affinity_group_id', 'BIGINT(20) UNSIGNED DEFAULT NULL COMMENT "affinity group id for control nodes"');
 CALL `cloud`.`IDEMPOTENT_ADD_COLUMN`('cloud.kubernetes_cluster', 'worker_node_affinity_group_id', 'BIGINT(20) UNSIGNED DEFAULT NULL COMMENT "affinity group id for worker nodes"');
 CALL `cloud`.`IDEMPOTENT_ADD_COLUMN`('cloud.kubernetes_cluster', 'etcd_node_affinity_group_id', 'BIGINT(20) UNSIGNED DEFAULT NULL COMMENT "affinity group id for etcd nodes"');
+
+-- Update value to random for the config 'vm.allocation.algorithm' or 'volume.allocation.algorithm' if configured as userconcentratedpod_random
+-- Update value to firstfit for the config 'vm.allocation.algorithm' or 'volume.allocation.algorithm' if configured as userconcentratedpod_firstfit
+UPDATE `cloud`.`configuration` SET value='random' WHERE name IN ('vm.allocation.algorithm', 'volume.allocation.algorithm') AND value='userconcentratedpod_random';
+UPDATE `cloud`.`configuration` SET value='firstfit' WHERE name IN ('vm.allocation.algorithm', 'volume.allocation.algorithm') AND value='userconcentratedpod_firstfit';
+
+-- Create webhook_filter table
+DROP TABLE IF EXISTS `cloud`.`webhook_filter`;
+CREATE TABLE IF NOT EXISTS `cloud`.`webhook_filter` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT 'id of the webhook filter',
+    `uuid` varchar(255) COMMENT 'uuid of the webhook filter',
+    `webhook_id` bigint unsigned  NOT NULL COMMENT 'id of the webhook',
+    `type` varchar(20) COMMENT 'type of the filter',
+    `mode` varchar(20) COMMENT 'mode of the filter',
+    `match_type` varchar(20) COMMENT 'match type of the filter',
+    `value` varchar(256) NOT NULL COMMENT 'value of the filter used for matching',
+    `created` datetime NOT NULL COMMENT 'date created',
+    PRIMARY KEY (`id`),
+    INDEX `i_webhook_filter__webhook_id`(`webhook_id`),
+    CONSTRAINT `fk_webhook_filter__webhook_id` FOREIGN KEY(`webhook_id`) REFERENCES `webhook`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
