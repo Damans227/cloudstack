@@ -3626,8 +3626,15 @@ public class VolumeApiServiceImpl extends ManagerBase implements VolumeApiServic
         }
 
         if (!sendCommand || (answer != null && answer.getResult())) {
-            // Mark the volume as detached
-            _volsDao.detachVolume(volume.getId());
+            // Mark the volume as detached, only if it is still attached to this VM. The host has already been told to
+            // unplug the disk by this point, so the remainder of this block is deliberately skipped when the volume
+            // moved: revoking access or publishing a detach event would assert something that is no longer true.
+            if (!_volsDao.detachVolume(volume.getId(), vmId)) {
+                Volume current = _volsDao.findById(volumeId);
+                logger.warn("Volume {} is no longer attached to VM {} (its attachment now points at VM id {}); leaving it unchanged",
+                        volume, vm, current == null ? null : current.getInstanceId());
+                return current;
+            }
 
             if (answer != null) {
                 String datastoreName = answer.getContextParam("datastoreName");

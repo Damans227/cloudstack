@@ -348,6 +348,23 @@ public class VolumeDaoImpl extends GenericDaoBase<VolumeVO, Long> implements Vol
     }
 
     @Override
+    public boolean detachVolume(long volumeId, long vmId) {
+        VolumeVO existing = findById(volumeId);
+        VolumeVO volume = createForUpdate(volumeId);
+        volume.setInstanceId(null);
+        volume.setDeviceId(null);
+        volume.setUpdated(new Date());
+        volume.setAttached(null);
+        if (existing != null && existing.getVolumeType() == Type.ROOT) {
+            volume.setVolumeType(Type.DATADISK);
+        }
+        SearchCriteria<VolumeVO> sc = AllFieldsSearch.create();
+        sc.setParameters("id", volumeId);
+        sc.setParameters("instanceId", vmId);
+        return update(volume, sc) > 0;
+    }
+
+    @Override
     @DB
     public HypervisorType getHypervisorType(long volumeId) {
         /* lookup from cluster of pool */
