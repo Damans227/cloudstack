@@ -37,7 +37,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
@@ -73,6 +75,7 @@ import org.apache.cloudstack.storage.datastore.db.PrimaryDataStoreDao;
 import org.apache.cloudstack.storage.datastore.db.StoragePoolVO;
 import org.apache.cloudstack.storage.datastore.db.VolumeDataStoreDao;
 import org.apache.cloudstack.storage.datastore.db.VolumeDataStoreVO;
+import org.apache.cloudstack.storage.to.VolumeObjectTO;
 import org.apache.commons.collections.CollectionUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -89,8 +92,12 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.verification.VerificationMode;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.cloud.agent.AgentManager;
+import com.cloud.agent.api.Answer;
+import com.cloud.agent.api.Command;
 import com.cloud.api.query.dao.ServiceOfferingJoinDao;
 import com.cloud.configuration.ConfigurationManager;
 import com.cloud.configuration.Resource.ResourceType;
@@ -141,6 +148,7 @@ import com.cloud.utils.exception.CloudRuntimeException;
 import com.cloud.utils.fsm.NoTransitionException;
 import com.cloud.vm.DiskProfile;
 import com.cloud.vm.UserVmManager;
+import com.cloud.vm.UserVmService;
 import com.cloud.vm.UserVmVO;
 import com.cloud.vm.VirtualMachine;
 import com.cloud.vm.VirtualMachine.State;
@@ -202,6 +210,10 @@ public class VolumeApiServiceImplTest {
     private MigrateVolumeCmd migrateVolumeCmd;
     @Mock
     private UserVmManager userVmManager;
+    @Mock
+    private UserVmService userVmServiceMock;
+    @Mock
+    private AgentManager agentManagerMock;
     @Mock
     private DataCenterDao _dcDao;
     @Mock
@@ -2939,6 +2951,127 @@ public class VolumeApiServiceImplTest {
             Assert.assertTrue(
                     "Exception message must reference Stopped-state requirement, was: " + e.getMessage(),
                     e.getMessage() != null && e.getMessage().contains("VM should be in"));
+        }
+    }
+
+    /**
+     * Sets up a detach of volume 100 from the stopped VM (id 2) that setUp() returns for any VM lookup. The stubs cover
+     * the whole detach path so that, without the stale-detach guard, the tests fail on their assertions rather than
+     * on a missing mock.
+     */
+    private VolumeVO mockVolumeForDetachFromStoppedVm(Long attachedVmId) {
+        VolumeVO volume = Mockito.mock(VolumeVO.class);
+        lenient().doReturn(100L).when(volume).getId();
+        Mockito.doReturn(attachedVmId).when(volume).getInstanceId();
+        lenient().doReturn(null).when(volume).getPoolId();
+        Mockito.doReturn(volume).when(volumeDaoMock).findById(100L);
+        lenient().when(virtualMachineManager.findClusterAndHostIdForVm(anyLong())).thenReturn(new Pair<>(null, null));
+        return volume;
+    }
+
+    private void verifyDetachUsageEvent(MockedStatic<UsageEventUtils> usageEventUtilsMocked, VerificationMode mode) {
+        usageEventUtilsMocked.verify(() -> UsageEventUtils.publishUsageEvent(eq(EventTypes.EVENT_VOLUME_DETACH), anyLong(), anyLong(), anyLong(),
+                nullable(String.class), nullable(Long.class), nullable(Long.class), nullable(Long.class), nullable(String.class), nullable(String.class),
+                nullable(Long.class), anyBoolean()), mode);
+    }
+
+    private void verifyStaleDetachSkipped(MockedStatic<UsageEventUtils> usageEventUtilsMocked) throws Exception {
+        Mockito.verify(volumeDaoMock, Mockito.never()).detachVolume(anyLong());
+        Mockito.verify(volumeDaoMock, Mockito.never()).detachVolume(anyLong(), anyLong());
+        Mockito.verify(virtualMachineManager, Mockito.never()).findClusterAndHostIdForVm(anyLong());
+        Mockito.verify(userVmManager, Mockito.never()).collectVmDiskStatistics(any());
+        Mockito.verify(agentManagerMock, Mockito.never()).send(nullable(Long.class), any(Command.class));
+        verifyDetachUsageEvent(usageEventUtilsMocked, Mockito.never());
+    }
+
+    @Test
+    public void detachVolumeViaDestroyVMTestSkipsDetachWhenVolumeAttachedToAnotherVm() throws Exception {
+        VolumeVO volume = mockVolumeForDetachFromStoppedVm(3L);
+
+        try (MockedStatic<UsageEventUtils> usageEventUtilsMocked = Mockito.mockStatic(UsageEventUtils.class)) {
+            Volume result = volumeApiServiceImpl.detachVolumeViaDestroyVM(2L, 100L);
+
+            Assert.assertSame(volume, result);
+            verifyStaleDetachSkipped(usageEventUtilsMocked);
+        }
+    }
+
+    @Test
+    public void detachVolumeViaDestroyVMTestSkipsDetachWhenVolumeAlreadyDetached() throws Exception {
+        VolumeVO volume = mockVolumeForDetachFromStoppedVm(null);
+
+        try (MockedStatic<UsageEventUtils> usageEventUtilsMocked = Mockito.mockStatic(UsageEventUtils.class)) {
+            Volume result = volumeApiServiceImpl.detachVolumeViaDestroyVM(2L, 100L);
+
+            Assert.assertSame(volume, result);
+            verifyStaleDetachSkipped(usageEventUtilsMocked);
+        }
+    }
+
+    @Test
+    public void detachVolumeViaDestroyVMTestClearsAttachmentWhenStillAttachedToVm() {
+        mockVolumeForDetachFromStoppedVm(2L);
+        Mockito.doReturn(true).when(volumeDaoMock).detachVolume(100L, 2L);
+
+        try (MockedStatic<UsageEventUtils> usageEventUtilsMocked = Mockito.mockStatic(UsageEventUtils.class)) {
+            volumeApiServiceImpl.detachVolumeViaDestroyVM(2L, 100L);
+
+            Mockito.verify(volumeDaoMock).detachVolume(100L, 2L);
+            Mockito.verify(volumeDaoMock, Mockito.never()).detachVolume(anyLong());
+            verifyDetachUsageEvent(usageEventUtilsMocked, Mockito.times(1));
+        }
+    }
+
+    @Test
+    public void detachVolumeViaDestroyVMTestKeepsAttachmentWhenReattachedDuringDetach() {
+        mockVolumeForDetachFromStoppedVm(2L);
+        Mockito.doReturn(false).when(volumeDaoMock).detachVolume(100L, 2L);
+
+        try (MockedStatic<UsageEventUtils> usageEventUtilsMocked = Mockito.mockStatic(UsageEventUtils.class)) {
+            volumeApiServiceImpl.detachVolumeViaDestroyVM(2L, 100L);
+
+            Mockito.verify(volumeDaoMock).detachVolume(100L, 2L);
+            Mockito.verify(volumeDaoMock, Mockito.never()).detachVolume(anyLong());
+            verifyDetachUsageEvent(usageEventUtilsMocked, Mockito.never());
+        }
+    }
+
+    /**
+     * The race this guard exists for only happens on the path that talks to the host: the attachment row is not
+     * cleared until after the agent round-trip returns, and a newer attach can land inside that window. The other
+     * tests here run against a stopped VM, so they never enter that branch. This one forces it.
+     */
+    @Test
+    public void detachVolumeViaDestroyVMTestKeepsAttachmentWhenReattachedDuringTheAgentRoundTrip() throws Exception {
+        VolumeVO volume = mockVolumeForDetachFromStoppedVm(2L);
+        Mockito.doReturn(1L).when(volume).getPoolId();
+
+        StoragePoolVO pool = Mockito.mock(StoragePoolVO.class);
+        Mockito.doReturn(pool).when(primaryDataStoreDaoMock).findByIdIncludingRemoved(1L);
+        Mockito.doReturn(pool).when(primaryDataStoreDaoMock).findById(1L);
+        Mockito.doReturn(true).when(volumeApiServiceImpl).isSendCommandForVmVolumeAttachDetach(nullable(HostVO.class), Mockito.eq(pool));
+
+        VolumeInfo volumeInfo = Mockito.mock(VolumeInfo.class);
+        Mockito.doReturn(Mockito.mock(VolumeObjectTO.class)).when(volumeInfo).getTO();
+        Mockito.doReturn(volumeInfo).when(volumeDataFactoryMock).getVolume(100L);
+        Mockito.doReturn(new Pair<List<String>, Set<String>>(new ArrayList<>(), new HashSet<>()))
+                .when(volumeOrchestrationService).getVolumeCheckpointPathsAndImageStoreUrls(Mockito.eq(100L), nullable(HypervisorType.class));
+
+        Answer answer = Mockito.mock(Answer.class);
+        Mockito.doReturn(true).when(answer).getResult();
+        Mockito.doReturn(answer).when(agentManagerMock).send(nullable(Long.class), any(Command.class));
+
+        // the volume moved to another VM while the host was being asked to unplug it
+        Mockito.doReturn(false).when(volumeDaoMock).detachVolume(100L, 2L);
+
+        try (MockedStatic<UsageEventUtils> usageEventUtilsMocked = Mockito.mockStatic(UsageEventUtils.class)) {
+            volumeApiServiceImpl.detachVolumeViaDestroyVM(2L, 100L);
+
+            // the round-trip really happened - otherwise this test proves nothing the others do not
+            Mockito.verify(agentManagerMock).send(nullable(Long.class), any(Command.class));
+            Mockito.verify(volumeDaoMock).detachVolume(100L, 2L);
+            Mockito.verify(volumeDaoMock, Mockito.never()).detachVolume(anyLong());
+            verifyDetachUsageEvent(usageEventUtilsMocked, Mockito.never());
         }
     }
 }

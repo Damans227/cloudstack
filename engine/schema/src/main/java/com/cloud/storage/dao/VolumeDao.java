@@ -68,6 +68,13 @@ public interface VolumeDao extends GenericDao<VolumeVO, Long>, StateDao<Volume.S
 
     void detachVolume(long volumeId);
 
+    /**
+     * Clears the attachment of the volume only if it is still attached to the given VM.
+     *
+     * @return true if the attachment was cleared; false if the volume is no longer attached to vmId
+     */
+    boolean detachVolume(long volumeId, long vmId);
+
     boolean isAnyVolumeActivelyUsingTemplateOnPool(long templateId, long poolId);
 
     List<VolumeVO> findCreatedByInstance(long id);

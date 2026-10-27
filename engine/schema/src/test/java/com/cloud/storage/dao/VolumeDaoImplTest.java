@@ -35,6 +35,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -43,6 +44,8 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import com.cloud.storage.Volume;
 import com.cloud.storage.VolumeVO;
+import com.cloud.utils.Pair;
+import com.cloud.utils.db.Attribute;
 import com.cloud.utils.db.Filter;
 import com.cloud.utils.db.SearchBuilder;
 import com.cloud.utils.db.SearchCriteria;
@@ -204,5 +207,70 @@ public class VolumeDaoImplTest {
         Mockito.verify(volumeDao, Mockito.times(1)).searchIncludingRemoved(
                 Mockito.any(SearchCriteria.class), Mockito.any(Filter.class), Mockito.eq(null),
                 Mockito.eq(false));
+    }
+
+    private static final long DETACHED_VOLUME_ID = 1L;
+    private static final long DETACHED_FROM_VM_ID = 2L;
+
+    private void mockVolumeForConditionalDetach(Volume.Type existingType, int updatedRows) {
+        VolumeVO existing = Mockito.mock(VolumeVO.class);
+        Mockito.doReturn(existingType).when(existing).getVolumeType();
+        Mockito.doReturn(existing).when(volumeDao).findById(DETACHED_VOLUME_ID);
+        Mockito.doReturn(updatedRows).when(volumeDao).update(Mockito.any(VolumeVO.class), Mockito.<SearchCriteria<VolumeVO>>any());
+    }
+
+    @SuppressWarnings("unchecked")
+    private SearchCriteria<VolumeVO> captureConditionalDetachCriteria() {
+        ArgumentCaptor<SearchCriteria<VolumeVO>> criteria = ArgumentCaptor.forClass(SearchCriteria.class);
+        Mockito.verify(volumeDao).update(Mockito.any(VolumeVO.class), criteria.capture());
+        return criteria.getValue();
+    }
+
+    private List<Object> boundValuesOf(SearchCriteria<VolumeVO> criteria) {
+        List<Object> values = new ArrayList<>();
+        for (Pair<Attribute, Object> bound : criteria.getValues()) {
+            values.add(bound.second());
+        }
+        return values;
+    }
+
+    @Test
+    public void detachVolumeTestRestrictsTheUpdateToTheVmTheVolumeIsStillAttachedTo() {
+        mockVolumeForConditionalDetach(Volume.Type.DATADISK, 1);
+
+        volumeDao.detachVolume(DETACHED_VOLUME_ID, DETACHED_FROM_VM_ID);
+
+        SearchCriteria<VolumeVO> criteria = captureConditionalDetachCriteria();
+        Assert.assertTrue("the update must be restricted by instance_id, otherwise a stale detach clears a newer attachment; where clause was: "
+                + criteria.getWhereClause(), criteria.getWhereClause().contains("instance_id"));
+        List<Object> bound = boundValuesOf(criteria);
+        Assert.assertEquals("expected the volume id and the vm id to be bound, got " + bound, 2, bound.size());
+        Assert.assertTrue("the vm id must be bound, got " + bound, bound.contains(DETACHED_FROM_VM_ID));
+        Assert.assertTrue("the volume id must be bound, got " + bound, bound.contains(DETACHED_VOLUME_ID));
+    }
+
+    @Test
+    public void detachVolumeTestClearsAttachmentWhenStillAttachedToVm() {
+        mockVolumeForConditionalDetach(Volume.Type.DATADISK, 1);
+
+        Assert.assertTrue(volumeDao.detachVolume(DETACHED_VOLUME_ID, DETACHED_FROM_VM_ID));
+    }
+
+    @Test
+    public void detachVolumeTestKeepsAttachmentWhenAttachedToAnotherVm() {
+        mockVolumeForConditionalDetach(Volume.Type.DATADISK, 0);
+
+        Assert.assertFalse(volumeDao.detachVolume(DETACHED_VOLUME_ID, DETACHED_FROM_VM_ID));
+    }
+
+    @Test
+    public void detachVolumeTestConvertsADetachedRootVolumeToADataDisk() {
+        mockVolumeForConditionalDetach(Volume.Type.ROOT, 1);
+
+        volumeDao.detachVolume(DETACHED_VOLUME_ID, DETACHED_FROM_VM_ID);
+
+        ArgumentCaptor<VolumeVO> updated = ArgumentCaptor.forClass(VolumeVO.class);
+        Mockito.verify(volumeDao).update(updated.capture(), Mockito.<SearchCriteria<VolumeVO>>any());
+        Assert.assertEquals(Volume.Type.DATADISK, updated.getValue().getVolumeType());
     }
 }
